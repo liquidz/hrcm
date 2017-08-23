@@ -1,14 +1,17 @@
 (ns hrcm.core)
 
 (defn- inc-pos
-  [c]
-  (update c :pos inc))
+  [{:keys [pos] :or {pos 0} :as c}]
+  (assoc c :pos (inc pos)))
+(defn- inc-step
+  [{:keys [step] :or {step 0} :as c}]
+  (assoc c :step (inc step)))
 
 (defn inbox
   [{[x & rst] :inbox :as c}]
   (if x
     (assoc c :inbox rst :holding x)
-    (assoc c :finish true)))
+    (assoc c :end true)))
 
 (defn outbox
   [{:keys [holding outbox] :or {outbox []} :as c}]
@@ -37,6 +40,7 @@
 
 (defn label
   [c id]
+  (println "kiteru")
   c)
 
 (defn- find-label-index
@@ -80,59 +84,49 @@
 
     :else c))
 
-;(defn run*
-;  [programs]
-;  (let [pos' (atom 0)]
-;    (try
-;      (loop [pos 0
-;             holding nil]
-;        (reset! pos' pos)
-;        (let [[op & args] (nth programs pos nil)]
-;          (case op
-;            :inbox
-;            (if-let [hold (inbox)]
-;              (recur (inc pos) hold))
-;
-;            :outbox
-;            (do (outbox holding)
-;                (recur (inc pos) nil))
-;
-;            ;:copyto
-;            ;(do
-;            ;  (apply copyto holding args)
-;            ;  )
-;
-;            "finish")))
-;        (catch Exception e
-;          )
-;        )
-;    )
-;      (catch Exception e
-;        (throw (ex-info
-;                 (.getMessage e)
-;                 (merge (ex-data e) {:position pos :holding holding})))
-;        nil))
-;    )
-;  )
-;
-;(defn run
-;  [& args]
-;  (try
-;    (apply run* args)
-;    (catch Exception e
-;      (println e))))
-;
-;
-;(comment
-;  (do
-;    (reset! inboxes [1 2])
-;    (reset! outboxes [])
-;    (run '[
-;           ;(:inbox)
-;           ;(:copyto 1)
-;           ;(:copyto [1])
-;           (:outbox)
-;           ])
-;    (println @inboxes @outboxes)
-;    )
-;  )
+(def ^:private operations
+  {
+   :inbox  (comp inc-step inc-pos inbox)
+   :outbox (comp inc-step inc-pos outbox)
+   :jump   (comp inc-step inc-pos jump)
+   :label  (comp inc-pos label)
+   }
+  
+  )
+
+(defn run
+  [{:keys [pos codes] :or {pos 0} :as c}]
+  (let [[op & args] (nth codes pos nil)
+        opf (get operations op)]
+    (when-not opf (throw (ex-info "unknown operation" {:op op})))
+
+    (let [{:keys [step end failed] :as res} (apply opf c args)]
+      (cond
+        failed
+        (println "FAILED: " (update res :step dec))
+
+        end
+        (println "FINISHED: " (update res :step dec))
+
+        :else
+        (run res)))))
+
+(comment
+
+  (let [sample
+        {:inbox (range 12)
+         :codes [
+                 [:label "top"]
+                 [:inbox]
+                 [:outbox]
+                 [:inbox]
+                 [:outbox]
+                 [:jump "top"]]
+         }
+        ]
+    ; size 3
+    ; speed 30
+    (run sample)
+    )
+  
+  )

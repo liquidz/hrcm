@@ -9,7 +9,7 @@
     {:inbox [2] :holding 1}
     
     {:inbox [] :holding nil}
-    {:inbox [] :holding nil :finish true}))
+    {:inbox [] :holding nil :end true}))
 
 (deftest outbox-test
   (are [before after] (= (outbox before) after)
