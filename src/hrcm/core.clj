@@ -38,6 +38,30 @@
     (assoc c :holding x)
     (assoc c :failed "no data")))
 
+; TODO: char calc
+(defn add
+  [{:keys [holding register] :or {register {}} :as c} target]
+  (if-not holding
+    (assoc c :faild "not holding")
+    (if-let [x (get register (address register target))]
+      (assoc c :holding (+ holding x))
+      (assoc c :failed "no data"))))
+
+(defn sub
+  [{:keys [holding register] :or {register {}} :as c} target]
+  (if-not holding
+    (assoc c :faild "not holding")
+    (if-let [x (get register (address register target))]
+      (assoc c :holding (- holding x))
+      (assoc c :failed "no data"))))
+
+(defn bump+
+  [{:keys [register] :or {register {}} :as c} target]
+    (if-let [x (get register (address register target))]
+      (assoc c :holding (inc x) :register (merge register {(address register target) (inc x)})) ; FIXME
+      (assoc c :failed "no data"))))
+
+
 (defn label
   [c id]
   (println "kiteru")
