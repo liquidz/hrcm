@@ -1,0 +1,24 @@
+{
+ :inbox [7 -4 0 -6]
+ :codes [; initialize
+         [:label "TOP"]
+         [:inbox]
+         [:copyto 0]
+         ; main loop
+         [:label "NEXT"]
+         [:outbox]
+         [:copyfrom 0]
+
+         [:jump-if-zero "TOP"]
+         [:jump-if-neg "INC"]
+         ; positive
+         [:bump- 0]
+         [:jump "NEXT"]
+
+         ; negative
+         [:label "INC"]
+         [:bump+ 0]
+         [:jump "NEXT"]]
+
+ :answer [7 6 5 4 3 2 1 0 -4 -3 -2 -1 0 0 -6 -5 -4 -3 -2 -1 0]
+ }

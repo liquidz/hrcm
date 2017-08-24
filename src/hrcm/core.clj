@@ -1,4 +1,9 @@
-(ns hrcm.core)
+(ns hrcm.core
+  (:require
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]
+    )
+  )
 
 (defn- inc-pos
   [{:keys [pos] :or {pos 0} :as c}]
@@ -38,33 +43,60 @@
     (assoc c :holding x)
     (assoc c :failed "no data")))
 
-; TODO: char calc
 (defn add
   [{:keys [holding register] :or {register {}} :as c} target]
-  (if-not holding
-    (assoc c :faild "not holding")
-    (if-let [x (get register (address register target))]
-      (assoc c :holding (+ holding x))
-      (assoc c :failed "no data"))))
+  (let [x (get register (address register target))]
+    (cond
+      (not holding)
+      (assoc c :failed "not holding")
+
+      (not x)
+      (assoc c :failed "no data")
+
+      (or (not (number? holding)) (not (number? x)))
+      (assoc c :failed "must be number")
+
+      :else
+      (assoc c :holding (+ holding x)))))
 
 (defn sub
   [{:keys [holding register] :or {register {}} :as c} target]
-  (if-not holding
-    (assoc c :faild "not holding")
-    (if-let [x (get register (address register target))]
-      (assoc c :holding (- holding x))
+  (let [x (get register (address register target))]
+    (cond
+      (not holding)
+      (assoc c :failed "not holding")
+
+      (not x)
+      (assoc c :failed "no data")
+
+      (not= (class holding) (class x))
+      (assoc c :failed "must be same type")
+
+      :else
+      (assoc c :holding (if (char? x)
+                          (- (int holding) (int x))
+                          (- holding x))))))
+
+(defn bump-inc
+  [{:keys [register] :or {register {}} :as c} target]
+  (let [addr (address register target)
+        x    (some-> (get register addr) inc)]
+    (if (and x (number? x))
+      (assoc c :holding x :register (assoc register addr x))
       (assoc c :failed "no data"))))
 
-(defn bump+
+(defn bump-dec
   [{:keys [register] :or {register {}} :as c} target]
-    (if-let [x (get register (address register target))]
-      (assoc c :holding (inc x) :register (merge register {(address register target) (inc x)})) ; FIXME
+  (let [addr (address register target)
+        x    (some-> (get register addr) dec)]
+    (if (and x (number? x))
+      (assoc c :holding x :register (assoc register addr x))
       (assoc c :failed "no data"))))
+
 
 
 (defn label
   [c id]
-  (println "kiteru")
   c)
 
 (defn- find-label-index
@@ -109,48 +141,45 @@
     :else c))
 
 (def ^:private operations
-  {
-   :inbox  (comp inc-step inc-pos inbox)
-   :outbox (comp inc-step inc-pos outbox)
-   :jump   (comp inc-step inc-pos jump)
-   :label  (comp inc-pos label)
-   }
-  
-  )
+  {:inbox        (comp inc-step inc-pos inbox)
+   :outbox       (comp inc-step inc-pos outbox)
+   :copyfrom     (comp inc-step inc-pos copyfrom)
+   :copyto       (comp inc-step inc-pos copyto)
+   :add          (comp inc-step inc-pos add)
+   :sub          (comp inc-step inc-pos sub)
+   :bump+        (comp inc-step inc-pos bump-inc)
+   :bump-        (comp inc-step inc-pos bump-dec)
+   :jump         (comp inc-step inc-pos jump)
+   :jump-if-zero (comp inc-step inc-pos jump-if-zero)
+   :jump-if-neg  (comp inc-step inc-pos jump-if-neg)
+   :label        (comp inc-pos  label)})
 
-(defn run
+(defn run*
   [{:keys [pos codes] :or {pos 0} :as c}]
   (let [[op & args] (nth codes pos nil)
         opf (get operations op)]
     (when-not opf (throw (ex-info "unknown operation" {:op op})))
-
     (let [{:keys [step end failed] :as res} (apply opf c args)]
-      (cond
-        failed
-        (println "FAILED: " (update res :step dec))
-
-        end
-        (println "FINISHED: " (update res :step dec))
-
-        :else
+      (if (or failed end)
+        (update res :step dec)
         (run res)))))
 
-(comment
+;(defn run
+;  [{:keys [pos codes] :or {pos 0} :as c}]
+;  (let [[op & args] (nth codes pos nil)
+;        opf (get operations op)]
+;    (when-not opf (throw (ex-info "unknown operation" {:op op})))
+;
+;    (let [{:keys [step end failed] :as res} (apply opf c args)]
+;      (cond
+;        failed
+;        (do (println "FAILED: " (update res :step dec))
+;            res)
+;
+;        end
+;        (do (println "FINISHED: " (update res :step dec))
+;            res)
+;
+;        :else
+;        (run res)))))
 
-  (let [sample
-        {:inbox (range 12)
-         :codes [
-                 [:label "top"]
-                 [:inbox]
-                 [:outbox]
-                 [:inbox]
-                 [:outbox]
-                 [:jump "top"]]
-         }
-        ]
-    ; size 3
-    ; speed 30
-    (run sample)
-    )
-  
-  )

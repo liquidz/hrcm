@@ -1,7 +1,10 @@
 (ns hrcm.core-test
   (:require
     [clojure.test :refer :all]
-    [hrcm.core :refer :all]))
+    [hrcm.core :refer :all]
+    [clojure.java.io :as io]
+    [clojure.edn :as edn]
+    ))
 
 (deftest inbox-test
   (are [before after] (= (inbox before) after)
@@ -74,6 +77,60 @@
   (doseq [c [{} {:holding "A"}]]
     (is (contains? (jump-if-neg c nil) :failed))))
 
-;(deftest a-test
-;  (testing "FIXME, I fail."
-;    (is (= 0 1))))
+(deftest add-test
+  (are [before target after] (= (add before target) after)
+    {:holding 1 :register {:target 2}}
+    :target
+    {:holding 3 :register {:target 2}}
+
+    {:holding 1 :register {:addr 0, 0 2}}
+    [:addr]
+    {:holding 3 :register {:addr 0, 0 2}})
+
+  (is (contains? (add {:holding \A} nil) :failed))
+  (is (contains? (add {:holding 1 :register {:target \A}} :target) :failed)))
+
+(deftest sub-test
+  (are [before target after] (= (sub before target) after)
+    {:holding 9 :register {:target 2}}
+    :target
+    {:holding 7 :register {:target 2}}
+
+    {:holding 9 :register {:addr 0, 0 2}}
+    [:addr]
+    {:holding 7 :register {:addr 0, 0 2}}
+
+    {:holding \B :register {:target \A}}
+    :target
+    {:holding 1 :register {:target \A}})
+
+  (is (contains? (add {:holding \A :register {:target 1}} :target) :failed))
+  (is (contains? (add {:holding 1 :register {:target \A}} :target) :failed)))
+
+(deftest bump-inc-test
+  (are [before target after] (= (bump-inc before target) after)
+    {:holding 0 :register {:target 1}}
+    :target
+    {:holding 2 :register {:target 2}}
+
+    {:holding 0 :register {:addr 0, 0 1}}
+    [:addr]
+    {:holding 2 :register {:addr 0, 0 2}}))
+
+(deftest bump-dec-test
+  (are [before target after] (= (bump-dec before target) after)
+    {:holding 9 :register {:target 1}}
+    :target
+    {:holding 0 :register {:target 0}}
+
+    {:holding 9 :register {:addr 0, 0 1}}
+    [:addr]
+    {:holding 0 :register {:addr 0, 0 0}}))
+
+(deftest run*-test
+  (testing "samples: count down"
+    (let [c   (edn/read-string (slurp "samples/countdown.edn"))
+          res (run* c)]
+      (is (:end res))
+      (is (= (:answer c) (:outbox res)))))
+  )
