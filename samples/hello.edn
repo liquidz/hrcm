@@ -1,0 +1,22 @@
+{
+ :inbox [0 23]
+ :register {0  \H,  1 13,  3 \L, 4  23
+            10 \O, 11 20, 13 \E, 14  3
+            20 \!, 21 -1, 23 \L, 24 10}
+
+ :codes [[:label "TOP"]
+         [:inbox]
+
+         [:label "NEXT"]
+         [:copyto :i]
+         [:copyfrom [:i]]
+         [:outbox]
+
+         [:bump+ :i]
+         [:copyfrom [:i]]
+         [:jump-if-neg "TOP"]
+         [:jump "NEXT"]]
+
+ :answer [\H \E \L \L \O \!
+          \L \O \!]
+ }

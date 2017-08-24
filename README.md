@@ -1,6 +1,9 @@
 # Human Resource Clojure Machine
 
-A Clojure library designed to ... well, that part is up to you.
+> It's called... a "Clojure".
+> A truly efficient worker, that never sleeps.
+> It's going to change everything.
+[Tomorrow Corporation : Human Resource Machine](https://tomorrowcorporation.com/humanresourcemachine)
 
 ## Usage
 

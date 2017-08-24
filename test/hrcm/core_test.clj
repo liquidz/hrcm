@@ -133,4 +133,10 @@
           res (run* c)]
       (is (:end res))
       (is (= (:answer c) (:outbox res)))))
+
+  (testing "samples: fixme"
+    (let [c   (edn/read-string (slurp "samples/hello.edn"))
+          res (run* c)]
+      (is (:end res))
+      (is (= (:answer c) (:outbox res)))))
   )

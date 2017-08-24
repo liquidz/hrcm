@@ -1,9 +1,4 @@
-(ns hrcm.core
-  (:require
-    [clojure.edn :as edn]
-    [clojure.java.io :as io]
-    )
-  )
+(ns hrcm.core)
 
 (defn- inc-pos
   [{:keys [pos] :or {pos 0} :as c}]
@@ -159,27 +154,8 @@
   (let [[op & args] (nth codes pos nil)
         opf (get operations op)]
     (when-not opf (throw (ex-info "unknown operation" {:op op})))
+    ;(println (assoc c :codes (cons op args)))
     (let [{:keys [step end failed] :as res} (apply opf c args)]
       (if (or failed end)
         (update res :step dec)
-        (run res)))))
-
-;(defn run
-;  [{:keys [pos codes] :or {pos 0} :as c}]
-;  (let [[op & args] (nth codes pos nil)
-;        opf (get operations op)]
-;    (when-not opf (throw (ex-info "unknown operation" {:op op})))
-;
-;    (let [{:keys [step end failed] :as res} (apply opf c args)]
-;      (cond
-;        failed
-;        (do (println "FAILED: " (update res :step dec))
-;            res)
-;
-;        end
-;        (do (println "FINISHED: " (update res :step dec))
-;            res)
-;
-;        :else
-;        (run res)))))
-
+        (run* res)))))
