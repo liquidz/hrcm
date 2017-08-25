@@ -1,4 +1,9 @@
-(ns hrcm.core)
+(ns hrcm.core
+  (:require
+    [clojure.spec.alpha :as s]))
+
+(s/def ::holding (s/or :char char? :number number?))
+(s/def ::must-hold (s/keys :req-un [::holding]))
 
 (defn- inc-pos
   [{:keys [pos] :or {pos 0} :as c}]
@@ -13,11 +18,21 @@
     (assoc c :inbox rst :holding x)
     (assoc c :end true)))
 
+;(println
+;  (try
+;    (outbox {})
+;    (catch Throwable e
+;      (.getMessage e)
+;      )
+;    )
+;  )
 (defn outbox
   [{:keys [holding outbox] :or {outbox []} :as c}]
-  (if holding
-    (assoc c :holding nil :outbox (conj outbox holding))
-    (assoc c :failed "FIXME")))
+  {:pre [(s/valid? ::must-hold c)]}
+  (assoc c :holding nil :outbox (conj outbox holding)))
+  ;(if holding
+  ;  (assoc c :holding nil :outbox (conj outbox holding))
+  ;  (assoc c :failed "FIXME")))
 
 (defn- address
   [register target]
@@ -159,3 +174,13 @@
       (if (or failed end)
         (update res :step dec)
         (run* res)))))
+
+
+(comment
+
+  (defn foo [x]
+    {:pre [(s/valid? ::must-hold x)]}
+    (println x))
+
+  (foo {:hoolding 1})
+  )

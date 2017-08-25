@@ -21,7 +21,9 @@
     
     {:holding 1}
     {:holding nil :outbox [1]})
-  (is (contains? (outbox {}) :failed)))
+  (is (thrown? Throwable (outbox {})))
+  ;(is (contains? (outbox {}) :failed))
+  )
 
 (deftest copyto-test
   (are [before target after] (= (copyto before target) after)
