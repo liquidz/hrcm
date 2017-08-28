@@ -21,9 +21,7 @@
     
     {:holding 1}
     {:holding nil :outbox [1]})
-  (is (thrown? Throwable (outbox {})))
-  ;(is (contains? (outbox {}) :failed))
-  )
+  (is (thrown? AssertionError (outbox {}))))
 
 (deftest copyto-test
   (are [before target after] (= (copyto before target) after)
@@ -34,7 +32,7 @@
     {:holding 1 :register {:addr 2}}
     [:addr]
     {:holding 1 :register {:addr 2, 2 1}})
-  (is (contains? (copyto {} nil) :failed)))
+  (is (thrown? AssertionError (copyto {} nil))))
 
 (deftest copyfrom-test
   (are [before target after] (= (copyfrom before target) after)
@@ -45,7 +43,7 @@
     {:register {:addr 2, 2 1}}
     [:addr]
     {:holding 1 :register {:addr 2, 2 1}})
-  (is (contains? (copyfrom {} :x) :failed)))
+  (is (thrown? AssertionError (copyfrom {} :x))))
 
 (deftest jump-test
   (are [before id after] (= (jump before id) after)
@@ -88,9 +86,9 @@
     {:holding 1 :register {:addr 0, 0 2}}
     [:addr]
     {:holding 3 :register {:addr 0, 0 2}})
-
-  (is (contains? (add {:holding \A} nil) :failed))
-  (is (contains? (add {:holding 1 :register {:target \A}} :target) :failed)))
+  (is (thrown? AssertionError (add {} nil)))
+  (is (thrown? AssertionError (add {:holding \A} nil)))
+  (is (thrown? AssertionError (add {:holding 1 :register {:target \A}} :target))))
 
 (deftest sub-test
   (are [before target after] (= (sub before target) after)
@@ -106,8 +104,8 @@
     :target
     {:holding 1 :register {:target \A}})
 
-  (is (contains? (add {:holding \A :register {:target 1}} :target) :failed))
-  (is (contains? (add {:holding 1 :register {:target \A}} :target) :failed)))
+  (is (contains? (sub {:holding \A :register {:target 1}} :target) :failed))
+  (is (contains? (sub {:holding 1 :register {:target \A}} :target) :failed)))
 
 (deftest bump-inc-test
   (are [before target after] (= (bump-inc before target) after)

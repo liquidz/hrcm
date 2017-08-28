@@ -2,7 +2,10 @@
   (:require
     [clojure.spec.alpha :as s]))
 
-(s/def ::holding (s/or :char char? :number number?))
+(s/def ::value     (s/or :char char? :number number?))
+(s/def ::number    number?)
+(s/def ::holding   ::value)
+;(s/def ::same-class )
 (s/def ::must-hold (s/keys :req-un [::holding]))
 
 (defn- inc-pos
@@ -18,21 +21,10 @@
     (assoc c :inbox rst :holding x)
     (assoc c :end true)))
 
-;(println
-;  (try
-;    (outbox {})
-;    (catch Throwable e
-;      (.getMessage e)
-;      )
-;    )
-;  )
 (defn outbox
   [{:keys [holding outbox] :or {outbox []} :as c}]
   {:pre [(s/valid? ::must-hold c)]}
   (assoc c :holding nil :outbox (conj outbox holding)))
-  ;(if holding
-  ;  (assoc c :holding nil :outbox (conj outbox holding))
-  ;  (assoc c :failed "FIXME")))
 
 (defn- address
   [register target]
@@ -40,38 +32,34 @@
     (get register (first target) nil)
     target))
 
+(defn- get*
+  [register target]
+  (get register (address register target)))
+
 (defn copyto
   [{:keys [register holding] :or {register {}} :as c} target]
-  (if-not holding
-    (assoc c :failed "FIXME")
-    (update c :register
-            assoc (address register target) holding)))
+  {:pre [(s/valid? ::must-hold c)]}
+  (update c :register
+          assoc (address register target) holding))
 
 (defn copyfrom
   [{:keys [register] :or {register {}} :as c} target]
-  (if-let [x (get register (address register target))]
-    (assoc c :holding x)
-    (assoc c :failed "no data")))
+  (let [x (get* register target)]
+    (assert (s/valid? ::holding x))
+    (assoc c :holding x)))
 
 (defn add
   [{:keys [holding register] :or {register {}} :as c} target]
-  (let [x (get register (address register target))]
-    (cond
-      (not holding)
-      (assoc c :failed "not holding")
-
-      (not x)
-      (assoc c :failed "no data")
-
-      (or (not (number? holding)) (not (number? x)))
-      (assoc c :failed "must be number")
-
-      :else
-      (assoc c :holding (+ holding x)))))
+  {:pre [(s/valid? ::must-hold c)]}
+  (let [x (get* register target)]
+    (assert (s/valid? ::number x))
+    (assert (s/valid? ::number holding))
+    (assoc c :holding (+ holding x))))
 
 (defn sub
   [{:keys [holding register] :or {register {}} :as c} target]
-  (let [x (get register (address register target))]
+  {:pre [(s/valid? ::must-hold c)]}
+  (let [x (get* register target)]
     (cond
       (not holding)
       (assoc c :failed "not holding")
@@ -102,8 +90,6 @@
     (if (and x (number? x))
       (assoc c :holding x :register (assoc register addr x))
       (assoc c :failed "no data"))))
-
-
 
 (defn label
   [c id]
@@ -170,7 +156,7 @@
         opf (get operations op)]
     (when-not opf (throw (ex-info "unknown operation" {:op op})))
     ;(println (assoc c :codes (cons op args)))
-    (let [{:keys [step end failed] :as res} (apply opf c args)]
+    (let [{:keys [end failed] :as res} (apply opf c args)]
       (if (or failed end)
         (update res :step dec)
         (run* res)))))
